@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div id="app" class="centered-container">
     <div v-if="!isDobSet">
       <form>
         <h1 id="dob" class="age-label">When were you born?</h1>
@@ -10,11 +10,32 @@
       </form>
     </div>
     <div v-else>
-      <h1 class="age-label">AGE</h1>
-      <h2 class="count">
-        <span>{{ year }}</span>
-        <sup>.{{ milliseconds }}</sup>
-      </h2>
+      <div class="countdown">
+        <div class="time-section">
+          <span class="time">{{ years }}</span>
+          <div class="label">YEARS</div>
+        </div>
+        <div class="time-section">
+          <span class="time">{{ months }}</span>
+          <div class="label">MONTHS</div>
+        </div>
+        <div class="time-section">
+          <span class="time">{{ days }}</span>
+          <div class="label">DAYS</div>
+        </div>
+        <div class="time-section">
+          <span class="time">{{ hours }}</span>
+          <div class="label">HOURS</div>
+        </div>
+        <div class="time-section">
+          <span class="time">{{ minutes }}</span>
+          <div class="label">MINUTES</div>
+        </div>
+        <div class="time-section">
+          <span class="time">{{ seconds }}</span>
+          <div class="label">SECONDS</div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -22,144 +43,185 @@
 <script>
 export default {
   name: "App",
-  methods: {
-    save: function () {
-      localStorage.dob = this.dob;
-      this.isDobSet = true;
-      this.renderAge();
-    },
-    renderAge: function () {
-      const now = new Date();
-      const duration = now - new Date(this.dob);
-      const years = duration / 31556900000;
-      const majorMinor = years.toFixed(9).toString().split(".");
-
-      this.year = majorMinor[0];
-      this.milliseconds = majorMinor[1];
-
-      setTimeout(this.renderAge, 100);
-    },
-  },
-  mounted: function () {
-    if (localStorage.dob) {
-      this.dob = localStorage.dob;
-      this.isDobSet = true;
-      this.renderAge();
-    }
-  },
   data() {
     return {
       dob: "",
       isDobSet: false,
-      year: 0,
-      milliseconds: 0,
+      years: 0,
+      months: 0,
+      days: 0,
+      hours: 0,
+      minutes: 0,
+      seconds: 0,
+      timer: null,
+      totalDots: 4160, // 80 years * 52 weeks
     };
+  },
+  computed: {
+    filledDots() {
+      if (!this.dob) return 0;
+      const now = new Date();
+      const birthDate = new Date(this.dob);
+      const diff = now - birthDate;
+      const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
+      return weeks;
+    },
+  },
+  methods: {
+    save() {
+      localStorage.dob = this.dob;
+      this.isDobSet = true;
+      this.startTimer();
+    },
+    startTimer() {
+      this.updateAge();
+      if (this.timer) clearInterval(this.timer);
+      this.timer = setInterval(this.updateAge, 1000);
+    },
+    updateAge() {
+      const now = new Date();
+      const birthDate = new Date(this.dob);
+
+      let years = now.getFullYear() - birthDate.getFullYear();
+      let months = now.getMonth() - birthDate.getMonth();
+      let days = now.getDate() - birthDate.getDate();
+      let hours = now.getHours() - birthDate.getHours();
+      let minutes = now.getMinutes() - birthDate.getMinutes();
+      let seconds = now.getSeconds() - birthDate.getSeconds();
+
+      if (seconds < 0) {
+        seconds += 60;
+        minutes--;
+      }
+      if (minutes < 0) {
+        minutes += 60;
+        hours--;
+      }
+      if (hours < 0) {
+        hours += 24;
+        days--;
+      }
+      if (days < 0) {
+        // Get days in previous month
+        const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        days += prevMonth.getDate();
+        months--;
+      }
+      if (months < 0) {
+        months += 12;
+        years--;
+      }
+
+      this.years = years;
+      this.months = months;
+      this.days = days;
+      this.hours = hours;
+      this.minutes = minutes;
+      this.seconds = seconds;
+    },
+    getDotStyle(i) {
+      if (i <= this.filledDots) {
+        const hue = (i / this.totalDots) * 240;
+        return { background: `hsl(${hue}, 80%, 50%)` };
+      }
+      return { background: "#333" };
+    },
+  },
+  mounted() {
+    if (localStorage.dob) {
+      this.dob = localStorage.dob;
+      this.isDobSet = true;
+      this.startTimer();
+    }
+  },
+  beforeDestroy() {
+    if (this.timer) clearInterval(this.timer);
   },
 };
 </script>
 
 <style>
-*,
-*:before,
-*:after {
-  box-sizing: border-box;
-}
-
-body,
-html {
+html,
+body {
+  height: 100%;
   margin: 0;
   padding: 0;
-  height: 100%;
-  background-color: #ffffff;
+  background: #222;
 }
 
-@media (prefers-color-scheme: dark) {
-  body,
-  html {
-    background-color: #222222;
-  }
+#app {
+  min-height: 100vh;
+  min-width: 100vw;
+  background: #222;
 }
 
-body {
-  /* -moz-osx-font-smoothing: grayscale; */
-  align-items: center;
+.centered-container {
+  min-height: 100vh;
+  display: flex;
   flex-direction: column;
-  /* -webkit-font-smoothing: antialiased; */
+  justify-content: center;
+  align-items: center;
+  background: #222;
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100vw;
+  height: 100vh;
+}
+
+.progress-grid {
+  display: grid;
+  grid-template-columns: repeat(52, 20px); /* 52 weeks per row, larger dots */
+  gap: 6px;
+  max-width: 1100px;
+  margin-bottom: 40px;
+  margin-top: 20px;
   justify-content: center;
 }
 
-body,
-input {
-  display: -webkit-flex;
-  font-family: "Avenir", "helvetica neue", helvetica, arial, sans-serif;
+.dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #333;
+  transition: background 0.3s;
 }
 
-.age-label {
+.countdown {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2.5rem;
+  margin-bottom: 0;
+}
+
+.time-section {
+  text-align: center;
+}
+
+.time {
+  font-size: 3rem;
+  font-weight: bold;
   color: #b0b5b9;
+}
+
+.label {
   font-size: 1.2rem;
-  line-height: 1;
-  margin: 0 0 0 2px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .age-label {
-    color: #494949;
-  }
-}
-
-.count {
   color: #494949;
-  margin: 0;
-  font-size: 6rem;
-  line-height: 1;
-  font-weight: 600;
+  margin-top: 0.3rem;
 }
 
 @media (prefers-color-scheme: dark) {
-  .count {
+  .time {
     color: #b0b5b9;
   }
-}
-
-.count sup {
-  font-size: 2.4rem;
-}
-
-label {
-  display: block;
-}
-
-input,
-button {
-  padding: 0.375rem 0.75rem;
-  font-size: 1.5rem;
-  appearance: none;
-}
-
-input {
-  margin-right: 0.5rem;
-  box-sizing: border-box;
-  border-width: 1px;
-  border-style: solid;
-  border-radius: 0.25rem;
-  border-color: #ccc;
-  background-color: #fff;
-}
-
-button {
-  outline: none;
-  display: block;
-  cursor: pointer;
-  color: #fff;
-  border: none;
-  border-radius: 0.25rem;
-  background-color: #0be;
-}
-
-footer {
-  padding-top: 0.5rem;
-  display: -webkit-flex;
-  flex-direction: row;
-  justify-content: center;
+  .label {
+    color: #494949;
+  }
 }
 </style>
