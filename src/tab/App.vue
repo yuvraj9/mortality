@@ -4,7 +4,7 @@
       <form>
         <h1 id="dob" class="age-label">When were you born?</h1>
         <footer>
-          <input v-model="dob" type="date" name="dob" id="dob" />
+          <input id="dob" v-model="dob" type="date" name="dob" />
           <button @click.prevent="save">Start</button>
         </footer>
       </form>
@@ -67,9 +67,21 @@ export default {
       return weeks;
     },
   },
+  mounted() {
+    if (localStorage.dob) {
+      this.dob = new Date(localStorage.dob).toISOString().split("T")[0];
+      this.isDobSet = true;
+      this.startTimer();
+    }
+  },
+  beforeDestroy() {
+    if (this.timer) clearInterval(this.timer);
+  },
   methods: {
     save() {
-      localStorage.dob = this.dob;
+      if (!this.dob) return;
+
+      localStorage.dob = new Date(this.dob).toISOString();
       this.isDobSet = true;
       this.startTimer();
     },
@@ -82,35 +94,31 @@ export default {
       const now = new Date();
       const birthDate = new Date(this.dob);
 
+      // Calculate years and months
       let years = now.getFullYear() - birthDate.getFullYear();
       let months = now.getMonth() - birthDate.getMonth();
-      let days = now.getDate() - birthDate.getDate();
-      let hours = now.getHours() - birthDate.getHours();
-      let minutes = now.getMinutes() - birthDate.getMinutes();
-      let seconds = now.getSeconds() - birthDate.getSeconds();
 
-      if (seconds < 0) {
-        seconds += 60;
-        minutes--;
-      }
-      if (minutes < 0) {
-        minutes += 60;
-        hours--;
-      }
-      if (hours < 0) {
-        hours += 24;
-        days--;
-      }
+      // Calculate days
+      let days = now.getDate() - birthDate.getDate();
+
+      // Adjust months and years if days are negative
       if (days < 0) {
-        // Get days in previous month
-        const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-        days += prevMonth.getDate();
+        // Get the last day of the previous month
+        const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        days += lastMonth.getDate();
         months--;
       }
+
+      // Adjust years if months are negative
       if (months < 0) {
-        months += 12;
         years--;
+        months += 12;
       }
+
+      // Calculate time components
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      const seconds = now.getSeconds();
 
       this.years = years;
       this.months = months;
@@ -126,16 +134,6 @@ export default {
       }
       return { background: "#333" };
     },
-  },
-  mounted() {
-    if (localStorage.dob) {
-      this.dob = localStorage.dob;
-      this.isDobSet = true;
-      this.startTimer();
-    }
-  },
-  beforeDestroy() {
-    if (this.timer) clearInterval(this.timer);
   },
 };
 </script>
